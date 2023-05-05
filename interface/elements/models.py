@@ -14,7 +14,7 @@ class StartWindow:
                  minwidth=300, minheight=100):
         self.window = Tk()
         self.window.title("Старт")
-        self.window.geometry(f"{width}x{height}")
+        self.window.geometry("%dx%d".format(width, height))
         self.window.minsize(width=minwidth, height=minheight)
         self.window.maxsize(width=maxwidth, height=maxheight)
         for c in range(2):
@@ -47,7 +47,7 @@ class LogInDatabase:
                  minwidth=300, minheight=400):
         self.window = Tk()
         self.window.title("Подключение к БД")
-        self.window.geometry(f"{width}x{height}")
+        self.window.geometry("%dx%d".format(width, height))
         self.window.minsize(width=minwidth, height=minheight)
         self.window.maxsize(width=maxwidth, height=maxheight)
         for c in range(2):
@@ -111,7 +111,7 @@ class DatabaseCreateWindow:
                  minwidth=300, minheight=400):
         self.window = Tk()
         self.window.title("Создание БД")
-        self.window.geometry(f"{width}x{height}")
+        self.window.geometry("%dx%d".format(width, height))
         self.window.minsize(width=minwidth, height=minheight)
         self.window.maxsize(width=maxwidth, height=maxheight)
         for c in range(2):
@@ -193,8 +193,8 @@ class DatabaseWindow:
                  ):
         self.window = Tk()
         self.database = database
-        self.window.title(f"Подключено к {self.database.db_name}")
-        self.window.geometry(f"{width}x{height}")
+        self.window.title("Подключено к " + str(self.database.db_name))
+        self.window.geometry("%dx%d".format(width, height))
         self.window.minsize(width=minwidth, height=minheight)
         self.window.maxsize(width=maxwidth, height=maxheight)
         for c in range(1):
@@ -250,8 +250,8 @@ class TableDataWindow:
         self.table_name = table_name
         self.table = database.get_table(self.table_name)
         print(self.table.columns)
-        self.window.title(f"{database.db_name}: {table_name} (view)")
-        self.window.geometry(f"{width}x{height}")
+        self.window.title(database.db_name + ": " + table_name + "(view)")
+        self.window.geometry("%dx%d".format(width, height))
         self.window.state('zoomed')
 
         # Create view area with scrollbars
