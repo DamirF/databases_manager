@@ -1,6 +1,7 @@
+from typing import List
+
 import psycopg2
 from psycopg2 import sql
-from psycopg2.extensions import ISOLATION_LEVEL_AUTOCOMMIT
 from psycopg2.extras import DictCursor
 from contextlib import closing
 
@@ -48,6 +49,8 @@ class Database:
 
 
 class Table:
+    ALLOWED_SYMBOLS = "abcdefghijklmnopqrstuvwxyz_0123456789"
+
     def __init__(self, database: Database, table_name: str):
         self.database = database
         self.name = table_name
@@ -78,6 +81,36 @@ class Table:
             table = mytable.get_string()
             file.write(table)
             file.write('\n')
+
+    @classmethod
+    def value_validate(cls, value: str) -> bool:
+        status = True
+        if not value:
+            status = False
+            return status
+        for char in value:
+            if char not in cls.ALLOWED_SYMBOLS:
+                status = False
+                break
+        return status
+
+    @classmethod
+    def create_in_db(cls, table_name: str,
+                     table_data: List[dict[str, str | str, int]]):
+        sql_query = "CREATE TABLE {}".format(table_name)
+        sql_query += " ("
+
+        for data_item in table_data:
+            column = "{} {}".format(
+                data_item["name"],
+                data_item["type"],
+            )
+            column += " PRIMARY KEY" if data_item["is_unique"] else ""
+            column += " NOT NULL" if data_item["null"] else ""
+            column += ", " if table_data.index(data_item) != len(table_data) - 1 else ")"
+            sql_query += column
+        sql_query += ";"
+        print(sql_query)
 
 
 class QueryManager:

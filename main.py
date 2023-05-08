@@ -5,4 +5,8 @@ from postgres.query_builder import QueryBuilder
 
 
 def main():
-    app = StartWindow()
+    username = "postgres"
+    password = "k.nsqghbrjk"
+    db_name = "django_proj"
+    database = Database(user=User(username=username, password=password), db_name=db_name)
+    app = CreateTableConfigurationWindow(database)
