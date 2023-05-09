@@ -1,3 +1,4 @@
+from datetime import datetime
 from typing import List
 
 import psycopg2
@@ -46,6 +47,9 @@ class Database:
             self,
             table_name
         )
+
+    def refresh_info(self):
+        self.tables = self._get_tables()
 
 
 class Table:
@@ -96,7 +100,8 @@ class Table:
 
     @classmethod
     def create_in_db(cls, table_name: str,
-                     table_data: List[dict[str, str | str, int]]):
+                     table_data: List[dict],
+                     database: Database):
         sql_query = "CREATE TABLE {}".format(table_name)
         sql_query += " ("
 
@@ -110,7 +115,44 @@ class Table:
             column += ", " if table_data.index(data_item) != len(table_data) - 1 else ")"
             sql_query += column
         sql_query += ";"
-        print(sql_query)
+
+        with database.connection as conn:
+            with conn.cursor() as cursor:
+                cursor.execute(sql_query)
+                conn.commit()
+
+        return Table(database, table_name)
+
+    def insert_data(self, data: list[list]) -> bool:
+        status = True
+        values_str = ""
+        for data_item in data:
+            values_str += "("
+            for value in data_item:
+                if type(value) is str or type(value) is datetime:
+                    values_str += "'{}'".format(str(value))
+                else:
+                    values_str += str(value)
+                values_str += ", " if data_item.index(value) != len(data_item) - 1 else ")"
+
+            if data.index(data_item) != len(data) -1:
+                values_str += ", "
+
+        insert_query = "INSERT INTO {} VALUES".format(self.name) + values_str + ";"
+        try:
+            with self.database.connection as conn:
+                with conn.cursor() as cursor:
+                    cursor.execute(insert_query)
+                    conn.commit()
+        except:
+            status = False
+        return status
+
+    def delete_from_db(self):
+        with self.database.connection as conn:
+            with conn.cursor() as cursor:
+                cursor.execute("DROP TABLE {};".format(self.name))
+                conn.commit()
 
 
 class QueryManager:

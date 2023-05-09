@@ -1,7 +1,9 @@
+from datetime import datetime
+from pprint import pprint
 from tkinter import Tk, ttk
 import tkinter as tk
 import tkinter.messagebox as mb
-from tkinter.filedialog import asksaveasfilename
+from tkinter.filedialog import asksaveasfilename, askopenfile, askopenfilename
 from tkinter.font import Font
 from tkinter.ttk import Treeview
 from typing import Dict, List
@@ -194,6 +196,7 @@ class DatabaseWindow:
                  ):
         self.window = Tk()
         self.database = database
+        self.database.refresh_info()
         self.window.title("Подключено к " + str(self.database.db_name))
         self.window.geometry("{}x{}".format(width, height))
         self.window.minsize(width=minwidth, height=minheight)
@@ -495,6 +498,9 @@ class CreateTableConfigurationWindow:
         if not Table.value_validate(table_name):
             self.show_error("Недопустимое имя таблицы")
             return
+        if table_name in self.database.tables:
+            self.show_error("Таблица с таким именем уже существует!")
+            return
         if not self.check_columns():
             self.show_error("Заполните все поля!")
             return
@@ -520,24 +526,117 @@ class CreateTableConfigurationWindow:
 
 class CreateTableDataWindow:
     def __init__(self, table_name: str,
-                 table_conf: List[dict[str, str | str, int]],
+                 table_conf: List[dict],
                  database: Database,
-                 width=800, height=600,
-                 maxwidth=800, maxheight=600,
-                 minwidth=800, minheight=600):
+                 width=400, height=200,
+                 maxwidth=400, maxheight=200,
+                 minwidth=400, minheight=200):
         self.window = Tk()
         self.database = database
         self.table_name = table_name
         self.table_conf = table_conf
+        self.insert_data = []
+        self.import_status = False
         self.window.title("Создание таблицы в БД: " + str(self.database.db_name) + ": Импорт данных")
         self.window.geometry("{}x{}".format(width, height))
         self.window.minsize(width=minwidth, height=minheight)
         self.window.maxsize(width=maxwidth, height=maxheight)
 
-        Table.create_in_db(self.table_name, self.table_conf)
+        self.table_name_label = tk.Label(self.window, text="Имя таблицы: {}".format(self.table_name),
+                                         font=("Arial", 16, "bold"))
+        self.table_name_label.pack(fill=tk.X)
+
+        self.import_btn = tk.Button(self.window, border=5, text="Импорт из файла",
+                                    font=("Arial", 16, "bold"), command=self.open_file)
+        self.import_btn.pack(fill=tk.X, ipady=10, padx=10)
+
+        self.import_status_label = tk.Label(self.window, text="Статус импорта: Нет",
+                                      font=("Arial", 16, "bold"))
+        self.import_status_label.pack(fill=tk.X)
+
+        self.table_save_btn = tk.Button(self.window, border=5, text="Сохранить таблицу",
+                                        font=("Arial", 16, "bold"), command=self.save_table, state="disabled")
+        self.table_save_btn.pack(fill=tk.X, ipady=10, padx=10)
 
         self.window.mainloop()
 
+    def destroy(self):
+        self.window.destroy()
+
+    @classmethod
+    def show_info(cls, message: str):
+        mb.showinfo("Информация", message)
+
+    @classmethod
+    def show_error(cls, message: str):
+        mb.showerror("Ошибка", message)
+
+    def get_types_list(self) -> List[str]:
+        return [column.get("type") for column in self.table_conf]
+
+    def types_parse(self, types: List[str], data: List[str]) -> list:
+        if len(types) != len(data):
+            raise Exception("Incorrect data")
+        parsed_data = []
+        for i in range(len(data)):
+            if types[i] == "int":
+                try:
+                    parsed_data.append(int(data[i]))
+                except Exception as _ex:
+                    raise _ex
+            elif types[i] == "float":
+                try:
+                    parsed_data.append(float(data[i]))
+                except Exception as _ex:
+                    raise _ex
+            elif types[i] == "text":
+                try:
+                    parsed_data.append(str(data[i]))
+                except Exception as _ex:
+                    raise _ex
+            elif types[i] == "datetime":
+                try:
+                    parsed_data.append(datetime.strptime(data[i], "%d/%m/%Y %H:%M:%S"))
+                except Exception as _ex:
+                    raise _ex
+        return parsed_data
+
+    def open_file(self):
+        filepath = askopenfilename(filetypes=(('text files', 'txt'),))
+        preapared_data = []
+        data = []
+        types = self.get_types_list()
+        print(types)
+        try:
+            if filepath != "":
+                with open(filepath, "r", encoding="utf-8") as file:
+                    text = file.read()
+                    preapared_data = text.split("\n")
+
+            data = [item.split("\t") for item in preapared_data]
+
+            typed_data = [self.types_parse(types, item) for item in data]
+
+            self.import_status_label.configure(text="Статус импорта: Успех")
+            self.import_status = True
+            self.table_save_btn.configure(state="normal")
+            self.insert_data = typed_data
+        except Exception as _ex:
+            self.show_error("Невозможно прочитать файл!")
+            self.import_status_label.configure(text="Статус импорта: Ошибка")
+            self.import_status = False
+            self.table_save_btn.configure(state="disabled")
+
+    def save_table(self):
+        table = Table.create_in_db(self.table_name, self.table_conf, self.database)
+        insert_status = table.insert_data(self.insert_data)
+        if insert_status:
+            self.destroy()
+            TableDataWindow(self.database, self.table_name)
+        else:
+            table.delete_from_db()
+            print(self.insert_data)
+            self.show_error("Ошибка")
 
 
 

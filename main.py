@@ -8,5 +8,5 @@ def main():
     username = "postgres"
     password = "k.nsqghbrjk"
     db_name = "django_proj"
-    database = Database(user=User(username=username, password=password), db_name=db_name)
-    app = CreateTableConfigurationWindow(database)
+    # database = Database(user=User(username=username, password=password), db_name=db_name)
+    app = StartWindow()
